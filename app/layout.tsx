@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: "Clips Hub — Movies & TV Shows",
   description:
     "Browse movies, TV shows, anime and Hindi cinema, with trailers, powered by the TMDB API.",
+  other: {
+    monetag: "b3161416359da337fc7de5be85a55cb1",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
