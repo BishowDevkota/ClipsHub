@@ -8,11 +8,14 @@ export default function WatchStage({
   backHref,
   source,
   trailerKey,
+  showNotice = true,
 }: {
   title: string;
   backHref: string;
   source: StreamSource | null;
   trailerKey: string | null;
+  /** False on the dedicated trailer page, where playing just the trailer is expected. */
+  showNotice?: boolean;
 }) {
   return (
     <div className="flex flex-col bg-black pt-16 pb-8 md:pt-20">
@@ -66,7 +69,7 @@ export default function WatchStage({
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-xl font-bold md:text-2xl">{title}</h1>
-            {source ? null : (
+            {source || !showNotice ? null : (
               <p className="rounded border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs text-brand-bright">
                 Full playback isn&apos;t connected yet —{" "}
                 {trailerKey ? "showing the trailer" : "no source available"}.

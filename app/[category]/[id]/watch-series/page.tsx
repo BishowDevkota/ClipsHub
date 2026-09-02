@@ -8,51 +8,48 @@ import {
   getDetails,
   getTitle,
   hasTmdbToken,
-  pickTrailer,
   type TmdbDetails,
 } from "@/lib/tmdb";
 
-async function loadTitle(
-  slug: string,
-  id: string,
-): Promise<TmdbDetails | null> {
-  const category = getCategory(slug);
-  if (!category) return null;
+async function getSeriesDetails(id: string): Promise<TmdbDetails | null> {
   try {
-    return await getDetails(category.mediaType, id);
+    return await getDetails("tv", id);
   } catch (error) {
-    console.error(`Failed to load watch/${slug}/${id}`, error);
+    console.error(`Failed to load watch-series/${id}`, error);
     return null;
   }
 }
 
 export async function generateMetadata({
   params,
-}: PageProps<"/watch/[category]/[id]">): Promise<Metadata> {
-  const { category, id } = await params;
-  const details = await loadTitle(category, id);
+}: PageProps<"/[category]/[id]/watch-series">): Promise<Metadata> {
+  const { id } = await params;
+  const details = await getSeriesDetails(id);
   return {
     title: details ? `Watch ${getTitle(details)} — Clips Hub` : "Not found",
   };
 }
 
-export default async function WatchPage({
+export default async function WatchSeriesPage({
   params,
-}: PageProps<"/watch/[category]/[id]">) {
+}: PageProps<"/[category]/[id]/watch-series">) {
   const { category: slug, id } = await params;
+
+  // Only TV categories (tv-shows, anime, hindi-tv-shows) lead here; movies
+  // belong on /…/watch-movie.
   const category = getCategory(slug);
-  if (!category) notFound();
+  if (!category || category.mediaType !== "tv") notFound();
   if (!hasTmdbToken()) return <SetupNotice />;
 
-  const details = await loadTitle(slug, id);
+  const details = await getSeriesDetails(id);
   if (!details) notFound();
 
   return (
     <WatchStage
       title={getTitle(details)}
       backHref={`/${category.slug}/${id}`}
-      source={getStreamSource(category.mediaType, details.id)}
-      trailerKey={pickTrailer(details.videos?.results)}
+      source={getStreamSource("tv", details.id)}
+      trailerKey={null}
     />
   );
 }

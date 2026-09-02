@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import TitleHero from "@/components/TitleHero";
-import { watchLabel } from "@/lib/streaming";
+import { watchLabel, watchPath } from "@/lib/streaming";
 import MediaGrid from "@/components/MediaGrid";
 import SetupNotice from "@/components/SetupNotice";
 import {
@@ -94,7 +94,8 @@ export default async function TitlePage({
         backdrop={backdropUrl(details.backdrop_path)}
         title={title}
         trailerKey={trailerKey}
-        watchHref={`/watch/${category.slug}/${id}`}
+        watchHref={watchPath(category.slug, category.mediaType, details.id)}
+        trailerHref={trailerKey ? `/${category.slug}/${id}/watch-trailer` : undefined}
         watchLabel={watchLabel(category.mediaType)}
       >
         <nav className="text-sm text-neutral-400">

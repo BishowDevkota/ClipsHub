@@ -1,6 +1,6 @@
 import HeroPlayer from "@/components/HeroPlayer";
 import HeroActions from "@/components/HeroActions";
-import { watchLabel } from "@/lib/streaming";
+import { watchLabel, watchPath } from "@/lib/streaming";
 import {
   backdropUrl,
   getCategorySlug,
@@ -45,7 +45,7 @@ export default async function Hero() {
           {featured.overview}
         </p>
         <HeroActions
-          watchHref={`/watch/${getCategorySlug(featured)}/${featured.id}`}
+          watchHref={watchPath(getCategorySlug(featured), mediaType, featured.id)}
           infoHref={`/${getCategorySlug(featured)}/${featured.id}`}
           watchLabel={watchLabel(mediaType)}
         />
