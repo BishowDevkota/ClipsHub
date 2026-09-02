@@ -4,11 +4,21 @@ import WatchStage from "@/components/WatchStage";
 import SetupNotice from "@/components/SetupNotice";
 import { getStreamSource } from "@/lib/streaming";
 import {
+  resolveEpisode,
+  resolveSeason,
+  toSeriesGuide,
+  toWatchInfo,
+} from "@/lib/watch";
+import {
   getCategory,
   getDetails,
+  getSeason,
   getTitle,
   hasTmdbToken,
+  pickRelated,
+  toCardItem,
   type TmdbDetails,
+  type TmdbSeason,
 } from "@/lib/tmdb";
 
 async function getSeriesDetails(id: string): Promise<TmdbDetails | null> {
@@ -20,18 +30,34 @@ async function getSeriesDetails(id: string): Promise<TmdbDetails | null> {
   }
 }
 
+/** A missing season shouldn't break playback — the picker just goes quiet. */
+async function getSeriesSeason(
+  id: number,
+  seasonNumber: number,
+): Promise<TmdbSeason | null> {
+  try {
+    return await getSeason(id, seasonNumber);
+  } catch (error) {
+    console.error(`Failed to load tv/${id}/season/${seasonNumber}`, error);
+    return null;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: PageProps<"/[category]/[id]/watch-series">): Promise<Metadata> {
   const { id } = await params;
   const details = await getSeriesDetails(id);
+  if (!details) return { title: "Not found — Clips Hub" };
   return {
-    title: details ? `Watch ${getTitle(details)} — Clips Hub` : "Not found",
+    title: `Watch ${getTitle(details)} — Clips Hub`,
+    description: details.overview?.slice(0, 160),
   };
 }
 
 export default async function WatchSeriesPage({
   params,
+  searchParams,
 }: PageProps<"/[category]/[id]/watch-series">) {
   const { category: slug, id } = await params;
 
@@ -44,12 +70,26 @@ export default async function WatchSeriesPage({
   const details = await getSeriesDetails(id);
   if (!details) notFound();
 
+  // `?season=` and `?episode=` drive the stream, so a shared link replays the
+  // same episode. Both are clamped to what the show actually has.
+  const query = await searchParams;
+  const seasonNumber = resolveSeason(details, query.season);
+  const season = await getSeriesSeason(details.id, seasonNumber);
+  const episodeNumber = resolveEpisode(query.episode, season?.episodes ?? []);
+
   return (
     <WatchStage
       title={getTitle(details)}
       backHref={`/${category.slug}/${id}`}
-      source={getStreamSource("tv", details.id)}
+      source={getStreamSource("tv", details.id, {
+        season: seasonNumber,
+        episode: episodeNumber,
+      })}
       trailerKey={null}
+      info={toWatchInfo(details, "tv")}
+      related={pickRelated(details).map(toCardItem)}
+      guide={toSeriesGuide(details, season, seasonNumber, episodeNumber)}
+      guideBasePath={`/${category.slug}/${id}/watch-series`}
     />
   );
 }

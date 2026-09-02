@@ -12,6 +12,7 @@ import {
   getTitle,
   getYear,
   hasTmdbToken,
+  pickRelated,
   pickTrailer,
   toCardItem,
   type TmdbDetails,
@@ -77,16 +78,7 @@ export default async function TitlePage({
     details.genres?.map((genre) => genre.name).join(", ") || null,
   ].filter(Boolean);
 
-  // Recommendations are better curated than `similar`; fall back when empty.
-  const related = [
-    ...(details.recommendations?.results ?? []),
-    ...(details.similar?.results ?? []),
-  ]
-    .filter((item) => item.poster_path || item.backdrop_path)
-    .filter(
-      (item, index, all) => all.findIndex((x) => x.id === item.id) === index,
-    )
-    .slice(0, 12);
+  const related = pickRelated(details);
 
   return (
     <article>

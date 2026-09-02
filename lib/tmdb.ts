@@ -30,15 +30,72 @@ export interface TmdbVideo {
   official: boolean;
 }
 
+export interface TmdbCompany {
+  id: number;
+  name: string;
+  logo_path?: string | null;
+}
+
+export interface TmdbSeasonSummary {
+  id: number;
+  name: string;
+  season_number: number;
+  episode_count?: number;
+  air_date?: string;
+  poster_path?: string | null;
+  overview?: string;
+}
+
+export interface TmdbEpisode {
+  id: number;
+  name: string;
+  overview?: string;
+  episode_number: number;
+  season_number: number;
+  air_date?: string;
+  runtime?: number | null;
+  still_path?: string | null;
+  vote_average?: number;
+}
+
+export interface TmdbSeason extends TmdbSeasonSummary {
+  episodes?: TmdbEpisode[];
+}
+
 export interface TmdbDetails extends TmdbItem {
   runtime?: number;
   number_of_seasons?: number;
   number_of_episodes?: number;
+  episode_run_time?: number[];
+  last_air_date?: string;
   genres?: { id: number; name: string }[];
   tagline?: string;
   status?: string;
+  homepage?: string;
+  budget?: number;
+  revenue?: number;
+  vote_count?: number;
+  networks?: TmdbCompany[];
+  production_companies?: TmdbCompany[];
+  spoken_languages?: { iso_639_1: string; english_name: string }[];
+  seasons?: TmdbSeasonSummary[];
+  created_by?: { id: number; name: string; profile_path?: string | null }[];
   videos?: { results: TmdbVideo[] };
-  credits?: { cast: { id: number; name: string; character?: string }[] };
+  credits?: {
+    cast: {
+      id: number;
+      name: string;
+      character?: string;
+      profile_path?: string | null;
+      order?: number;
+    }[];
+    crew?: {
+      id: number;
+      name: string;
+      job: string;
+      profile_path?: string | null;
+    }[];
+  };
   similar?: { results: TmdbItem[] };
   recommendations?: { results: TmdbItem[] };
 }
@@ -107,6 +164,17 @@ export async function getDetails(
   });
 }
 
+/**
+ * One season's episode list. TMDB only returns episodes from the per-season
+ * endpoint — the `/tv/{id}` payload just summarises the seasons.
+ */
+export async function getSeason(
+  id: number | string,
+  seasonNumber: number,
+): Promise<TmdbSeason> {
+  return tmdb<TmdbSeason>(`/tv/${id}/season/${seasonNumber}`);
+}
+
 export async function search(query: string): Promise<TmdbItem[]> {
   if (!query.trim()) return [];
   const data = await tmdb<PagedResponse>("/search/multi", { query });
@@ -141,6 +209,10 @@ export const backdropUrl = (path: string | null | undefined) =>
   imageUrl(path, "original");
 export const thumbUrl = (path: string | null | undefined) =>
   imageUrl(path, "w780");
+export const profileUrl = (path: string | null | undefined) =>
+  imageUrl(path, "w185");
+export const stillUrl = (path: string | null | undefined) =>
+  imageUrl(path, "w300");
 
 export function getTitle(item: TmdbItem): string {
   return item.title ?? item.name ?? "Untitled";
@@ -434,6 +506,22 @@ export function toCardItem(item: TmdbItem): CardItem {
     rating: item.vote_average ? Math.round(item.vote_average * 10) : null,
     overview: item.overview ?? "",
   };
+}
+
+/**
+ * Titles to suggest next to the one being viewed. TMDB's `recommendations` are
+ * better curated than `similar`, so those lead and `similar` only fills gaps.
+ */
+export function pickRelated(details: TmdbDetails, limit = 12): TmdbItem[] {
+  return [
+    ...(details.recommendations?.results ?? []),
+    ...(details.similar?.results ?? []),
+  ]
+    .filter((item) => item.poster_path || item.backdrop_path)
+    .filter(
+      (item, index, all) => all.findIndex((x) => x.id === item.id) === index,
+    )
+    .slice(0, limit);
 }
 
 /** The home page rows, in display order. */

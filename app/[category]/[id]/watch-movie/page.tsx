@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import WatchStage from "@/components/WatchStage";
 import SetupNotice from "@/components/SetupNotice";
 import { getStreamSource } from "@/lib/streaming";
+import { toWatchInfo } from "@/lib/watch";
 import {
   getCategory,
   getDetails,
   getTitle,
   hasTmdbToken,
+  pickRelated,
+  toCardItem,
   type TmdbDetails,
 } from "@/lib/tmdb";
 
@@ -25,8 +28,10 @@ export async function generateMetadata({
 }: PageProps<"/[category]/[id]/watch-movie">): Promise<Metadata> {
   const { id } = await params;
   const details = await getMovieDetails(id);
+  if (!details) return { title: "Not found — Clips Hub" };
   return {
-    title: details ? `Watch ${getTitle(details)} — Clips Hub` : "Not found",
+    title: `Watch ${getTitle(details)} — Clips Hub`,
+    description: details.overview?.slice(0, 160),
   };
 }
 
@@ -50,6 +55,8 @@ export default async function WatchMoviePage({
       backHref={`/${category.slug}/${id}`}
       source={getStreamSource("movie", details.id)}
       trailerKey={null}
+      info={toWatchInfo(details, "movie")}
+      related={pickRelated(details).map(toCardItem)}
     />
   );
 }
