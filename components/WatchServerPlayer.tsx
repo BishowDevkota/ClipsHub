@@ -499,10 +499,6 @@ export default function WatchServerPlayer({
           </button>
         </div>
       </div>
-
-      <p className="mt-2 text-center text-[11px] tracking-wide text-neutral-600">
-        ⌨ Space = play/pause · F = fullscreen · click the video to control it
-      </p>
     </div>
   );
 }
