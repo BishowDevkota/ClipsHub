@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type HlsJs from "hls.js";
 import type { StreamSource, WatchServer } from "@/lib/streaming";
 
@@ -294,6 +294,92 @@ export default function WatchServerPlayer({
     enabledExists && servers[active]?.enabled ? active : firstEnabled(servers);
   const server = servers[shownActive] ?? null;
 
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  /**
+   * Fullscreen the player. For an embed we fullscreen the <iframe> itself so
+   * the host's own player (controls, Space, etc.) keeps working inside it;
+   * otherwise (our own <video>, trailer fallback, empty box) we fullscreen the
+   * stage. Falls back to the stage if the browser rejects the iframe request.
+   */
+  const toggleFullscreen = useCallback(async () => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+      const frame = stage.querySelector("iframe");
+      if (frame && typeof frame.requestFullscreen === "function") {
+        await frame.requestFullscreen();
+      } else if (typeof stage.requestFullscreen === "function") {
+        await stage.requestFullscreen();
+      }
+    } catch {
+      // requestFullscreen can be rejected outside a user gesture.
+    }
+  }, []);
+
+  // Keep the icon in sync when fullscreen is entered/left by any means
+  // (Esc, a host player's own fullscreen button, the browser UI…).
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  // Best-effort keyboard controls.
+  //  • Space → play/pause our own <video>. For cross-origin embeds the host's
+  //            player handles Space once it has focus (i.e. after you click
+  //            it), which is a browser limitation — we can't reach inside.
+  //  • F     → fullscreen. Works while this page has focus; once an embed
+  //            itself is focused the browser routes keys to the host instead.
+  useEffect(() => {
+    const isTyping = (target: EventTarget | null) =>
+      target instanceof HTMLElement &&
+      (target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || isTyping(event.target)) return;
+
+      if (event.code === "Space") {
+        const video = stageRef.current?.querySelector("video");
+        // Don't hijack Space when a button/link is focused — it must keep its
+        // normal activation behaviour (e.g. switching servers on the bar).
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.closest("button, a, [role='button'], [role='link']")
+        ) {
+          return;
+        }
+        // The <video> element itself (and embed players) already answer Space
+        // natively, so only step in when focus is elsewhere on the page.
+        if (video && event.target !== video) {
+          event.preventDefault();
+          if (video.paused) void video.play().catch(() => {});
+          else video.pause();
+        } else if (!video && stageRef.current?.querySelector("iframe")) {
+          // Embed visible but not focused: keep Space from scrolling the page.
+          // The host player takes over once you click into it.
+          event.preventDefault();
+        }
+        return;
+      }
+
+      if (event.code === "KeyF") {
+        event.preventDefault();
+        void toggleFullscreen();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleFullscreen]);
+
   const renderFrame = () => {
     if (enabledExists && server?.enabled) {
       const key = `${server.number}-${(server.url ?? server.apiUrl) ?? ""}`;
@@ -388,10 +474,35 @@ export default function WatchServerPlayer({
           aria-hidden
           className="pointer-events-none absolute -inset-x-6 -inset-y-4 rounded-[2rem] bg-brand/20 opacity-60 blur-3xl"
         />
-        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-[0_40px_100px_-30px_rgba(0,0,0,0.9)] ring-1 ring-white/15">
+        <div
+          ref={stageRef}
+          className={[
+            "group relative aspect-video w-full overflow-hidden bg-black shadow-[0_40px_100px_-30px_rgba(0,0,0,0.9)]",
+            // Fullscreen fills the screen edge-to-edge, so drop the rounding.
+            isFullscreen ? "rounded-none" : "rounded-2xl ring-1 ring-white/15",
+          ].join(" ")}
+        >
           {renderFrame()}
+
+          {/* Page-level fullscreen toggle, top-right so it never collides
+              with the hosts' own bottom control bars. */}
+          <button
+            type="button"
+            onClick={() => void toggleFullscreen()}
+            aria-label={
+              isFullscreen ? "Exit fullscreen (F)" : "Fullscreen (F)"
+            }
+            title={isFullscreen ? "Exit fullscreen (F)" : "Fullscreen (F)"}
+            className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-black/50 text-sm text-white opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-black/70 hover:text-brand-bright"
+          >
+            {isFullscreen ? "🗗" : "⛶"}
+          </button>
         </div>
       </div>
+
+      <p className="mt-2 text-center text-[11px] tracking-wide text-neutral-600">
+        ⌨ Space = play/pause · F = fullscreen · click the video to control it
+      </p>
     </div>
   );
 }
