@@ -4,7 +4,8 @@ import CastCarousel from "@/components/CastCarousel";
 import EpisodePicker from "@/components/EpisodePicker";
 import MediaCard from "@/components/MediaCard";
 import ScoreRing from "@/components/ScoreRing";
-import type { StreamSource } from "@/lib/streaming";
+import WatchServerPlayer from "@/components/WatchServerPlayer";
+import type { StreamSource, WatchServer } from "@/lib/streaming";
 import type { CardItem } from "@/lib/tmdb";
 import type { WatchSeriesGuide, WatchTitleInfo } from "@/lib/watch";
 
@@ -195,67 +196,10 @@ function InfoPanel({ info }: { info: WatchTitleInfo }) {
   );
 }
 
-function Player({
-  title,
-  source,
-  trailerKey,
-}: {
-  title: string;
-  source: StreamSource | null;
-  trailerKey: string | null;
-}) {
-  return (
-    <div className="relative">
-      {/* Gold bloom that reads as light spilling off the screen. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -inset-x-6 -inset-y-4 rounded-[2rem] bg-brand/20 opacity-60 blur-3xl"
-      />
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-[0_40px_100px_-30px_rgba(0,0,0,0.9)] ring-1 ring-white/15">
-        {source ? (
-          source.kind === "video" ? (
-            <video
-              className="absolute inset-0 h-full w-full"
-              src={source.url}
-              controls
-              autoPlay
-              playsInline
-            />
-          ) : (
-            <iframe
-              className="absolute inset-0 h-full w-full"
-              src={source.url}
-              title={`${title} — full playback`}
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              allowFullScreen
-            />
-          )
-        ) : trailerKey ? (
-          <iframe
-            className="absolute inset-0 h-full w-full"
-            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=0&rel=0&modestbranding=1&playsinline=1&controls=1`}
-            title={`${title} trailer`}
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
-            <span aria-hidden className="text-3xl opacity-40">
-              ▣
-            </span>
-            <p className="text-sm text-neutral-500">
-              Nothing to play for this title yet.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function WatchStage({
   title,
   backHref,
+  servers,
   source,
   trailerKey,
   showNotice = true,
@@ -266,7 +210,10 @@ export default function WatchStage({
 }: {
   title: string;
   backHref: string;
-  source: StreamSource | null;
+  /** Keyless source buttons (Server 1…N) rendered above the player. */
+  servers?: WatchServer[];
+  /** Single-source fallback used when no server list is passed. */
+  source?: StreamSource | null;
   trailerKey: string | null;
   /** False on the dedicated trailer page, where playing just the trailer is expected. */
   showNotice?: boolean;
@@ -280,6 +227,10 @@ export default function WatchStage({
   guideBasePath?: string;
 }) {
   const backLabel = info?.title ?? title;
+  // A server list counts as connected whenever any entry is configured.
+  const hasPlayback = servers?.length
+    ? servers.some((server) => server.enabled)
+    : Boolean(source);
 
   return (
     <div className="relative bg-black pt-16 pb-16 md:pt-20">
@@ -315,14 +266,19 @@ export default function WatchStage({
           {info ? <StageHeader info={info} /> : null}
 
           <div className="mt-6">
-            <Player title={title} source={source} trailerKey={trailerKey} />
+            <WatchServerPlayer
+              title={title}
+              servers={servers ?? []}
+              trailerKey={trailerKey}
+              legacy={source}
+            />
           </div>
 
           {guide && guideBasePath ? (
             <EpisodePicker basePath={guideBasePath} guide={guide} />
           ) : null}
 
-          {source || !showNotice ? null : (
+          {hasPlayback || !showNotice ? null : (
             <p className="mt-4 rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-xs text-brand-bright">
               Full playback isn&apos;t connected yet —{" "}
               {trailerKey ? "showing the trailer" : "no source available"}.

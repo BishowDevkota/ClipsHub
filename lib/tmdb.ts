@@ -175,6 +175,27 @@ export async function getSeason(
   return tmdb<TmdbSeason>(`/tv/${id}/season/${seasonNumber}`);
 }
 
+/**
+ * IMDb id for a title, used by keyless third-party servers that index by
+ * IMDb (SuperEmbed-style JSON APIs) rather than by TMDB id. Returns null
+ * when TMDB has no mapping or the lookup fails — callers fall back to
+ * whatever else they can key on.
+ */
+export async function getImdbId(
+  type: MediaType,
+  id: number | string,
+): Promise<string | null> {
+  try {
+    const data = await tmdb<{ imdb_id?: string | null }>(
+      `/${type}/${id}/external_ids`,
+    );
+    return data.imdb_id ?? null;
+  } catch (error) {
+    console.warn(`Could not resolve IMDb id for ${type}/${id}`, error);
+    return null;
+  }
+}
+
 export async function search(query: string): Promise<TmdbItem[]> {
   if (!query.trim()) return [];
   const data = await tmdb<PagedResponse>("/search/multi", { query });

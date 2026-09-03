@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import WatchStage from "@/components/WatchStage";
 import SetupNotice from "@/components/SetupNotice";
-import { getStreamSource } from "@/lib/streaming";
+import { getWatchServers } from "@/lib/streaming";
 import {
   resolveEpisode,
   resolveSeason,
@@ -81,7 +81,7 @@ export default async function WatchSeriesPage({
     <WatchStage
       title={getTitle(details)}
       backHref={`/${category.slug}/${id}`}
-      source={getStreamSource("tv", details.id, {
+      servers={getWatchServers("tv", details.id, {
         season: seasonNumber,
         episode: episodeNumber,
       })}

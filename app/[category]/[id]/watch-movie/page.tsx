@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import WatchStage from "@/components/WatchStage";
 import SetupNotice from "@/components/SetupNotice";
-import { getStreamSource } from "@/lib/streaming";
+import { getWatchServers } from "@/lib/streaming";
 import { toWatchInfo } from "@/lib/watch";
 import {
   getCategory,
@@ -53,7 +53,7 @@ export default async function WatchMoviePage({
     <WatchStage
       title={getTitle(details)}
       backHref={`/${category.slug}/${id}`}
-      source={getStreamSource("movie", details.id)}
+      servers={getWatchServers("movie", details.id)}
       trailerKey={null}
       info={toWatchInfo(details, "movie")}
       related={pickRelated(details).map(toCardItem)}
