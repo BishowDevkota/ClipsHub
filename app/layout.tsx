@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
 
@@ -12,6 +13,9 @@ export const metadata: Metadata = {
   title: "Clips Hub — Movies & TV Shows",
   description:
     "Browse movies, TV shows, anime and Hindi cinema, with trailers, powered by the TMDB API.",
+  other: {
+    monetag: "b3161416359da337fc7de5be85a55cb1",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -29,6 +33,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             TMDB. Built as a learning project.
           </p>
         </footer>
+
+        {/* Monetag ad tag. afterInteractive keeps it off the critical path. */}
+        <Script
+          src="https://quge5.com/88/tag.min.js"
+          data-zone="275684"
+          data-cfasync="false"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
