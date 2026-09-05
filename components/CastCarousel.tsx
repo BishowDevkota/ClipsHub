@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WatchCastMember } from "@/lib/watch";
 
@@ -24,12 +23,10 @@ function CastCard({ member }: { member: WatchCastMember }) {
     <figure className="group/cast w-32 flex-none sm:w-36 md:w-40">
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-neutral-900 ring-1 ring-white/10 transition duration-300 group-hover/cast:-translate-y-1 group-hover/cast:shadow-[0_18px_40px_-18px_rgba(245,166,35,0.55)] group-hover/cast:ring-brand/60">
         {member.image ? (
-          <Image
+          <img
             src={member.image}
             alt={member.name}
-            fill
-            sizes="(max-width: 640px) 128px, (max-width: 768px) 144px, 160px"
-            className="object-cover object-top"
+            className="absolute inset-0 h-full w-full object-cover object-top"
           />
         ) : (
           <Initials name={member.name} />
